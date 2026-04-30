@@ -7,7 +7,7 @@
 
     <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
         android:text="Tablet Controller" android:textSize="24sp" android:textStyle="bold"
-        android:layout_marginBottom="24dp"/>
+        android:layout_marginBottom="16dp"/>
 
     <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
         android:text="MQTT Broker (e.g. tcp://192.168.9.x:1883)"/>
@@ -29,21 +29,44 @@
         android:text="Save and Connect"/>
 
     <View android:layout_width="match_parent" android:layout_height="1dp"
-        android:background="#cccccc" android:layout_marginTop="24dp" android:layout_marginBottom="16dp"/>
+        android:background="#cccccc" android:layout_marginTop="16dp" android:layout_marginBottom="16dp"/>
 
-    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-        android:text="One-time setup:" android:textStyle="bold"/>
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:orientation="horizontal" android:gravity="center_vertical">
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:text="MQTT: " android:textStyle="bold"/>
+        <TextView android:id="@+id/tv_mqtt_status" android:layout_width="wrap_content"
+            android:layout_height="wrap_content" android:text="Disconnected"
+            android:textColor="#F44336" android:textStyle="bold"/>
+    </LinearLayout>
+
+    <View android:layout_width="match_parent" android:layout_height="1dp"
+        android:background="#cccccc" android:layout_marginTop="16dp" android:layout_marginBottom="16dp"/>
 
     <Button android:id="@+id/btn_admin" android:layout_width="match_parent"
-        android:layout_height="wrap_content" android:layout_marginTop="8dp"
+        android:layout_height="wrap_content"
         android:text="Grant Device Admin (for sleep command)"/>
 
     <Button android:id="@+id/btn_notification" android:layout_width="match_parent"
         android:layout_height="wrap_content" android:layout_marginTop="8dp"
         android:text="Grant Notification Access (for media info)"/>
 
-    <TextView android:id="@+id/tv_status" android:layout_width="wrap_content"
-        android:layout_height="wrap_content" android:layout_marginTop="16dp"
-        android:text="Status: starting..." android:textSize="13sp"/>
+    <View android:layout_width="match_parent" android:layout_height="1dp"
+        android:background="#cccccc" android:layout_marginTop="16dp" android:layout_marginBottom="8dp"/>
+
+    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+        android:text="Incoming messages:" android:textStyle="bold"/>
+
+    <ScrollView android:id="@+id/scroll_messages" android:layout_width="match_parent"
+        android:layout_height="200dp" android:layout_marginTop="8dp"
+        android:background="#f5f5f5" android:padding="8dp">
+        <TextView android:id="@+id/tv_messages" android:layout_width="match_parent"
+            android:layout_height="wrap_content" android:text=""
+            android:fontFamily="monospace" android:textSize="12sp"/>
+    </ScrollView>
+
+    <Button android:id="@+id/btn_clear" android:layout_width="wrap_content"
+        android:layout_height="wrap_content" android:layout_marginTop="4dp"
+        android:text="Clear"/>
 
 </LinearLayout>
