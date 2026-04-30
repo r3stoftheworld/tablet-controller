@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="24dp">
+
+    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+        android:text="Tablet Controller" android:textSize="24sp" android:textStyle="bold"
+        android:layout_marginBottom="24dp"/>
+
+    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+        android:text="MQTT Broker (e.g. tcp://192.168.9.x:1883)"/>
+    <EditText android:id="@+id/et_broker" android:layout_width="match_parent"
+        android:layout_height="wrap_content" android:inputType="text"/>
+
+    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+        android:text="Username (optional)" android:layout_marginTop="8dp"/>
+    <EditText android:id="@+id/et_username" android:layout_width="match_parent"
+        android:layout_height="wrap_content" android:inputType="text"/>
+
+    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+        android:text="Password (optional)" android:layout_marginTop="8dp"/>
+    <EditText android:id="@+id/et_password" android:layout_width="match_parent"
+        android:layout_height="wrap_content" android:inputType="textPassword"/>
+
+    <Button android:id="@+id/btn_save" android:layout_width="match_parent"
+        android:layout_height="wrap_content" android:layout_marginTop="16dp"
+        android:text="Save and Connect"/>
+
+    <View android:layout_width="match_parent" android:layout_height="1dp"
+        android:background="#cccccc" android:layout_marginTop="24dp" android:layout_marginBottom="16dp"/>
+
+    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+        android:text="One-time setup:" android:textStyle="bold"/>
+
+    <Button android:id="@+id/btn_admin" android:layout_width="match_parent"
+        android:layout_height="wrap_content" android:layout_marginTop="8dp"
+        android:text="Grant Device Admin (for sleep command)"/>
+
+    <Button android:id="@+id/btn_notification" android:layout_width="match_parent"
+        android:layout_height="wrap_content" android:layout_marginTop="8dp"
+        android:text="Grant Notification Access (for media info)"/>
+
+    <TextView android:id="@+id/tv_status" android:layout_width="wrap_content"
+        android:layout_height="wrap_content" android:layout_marginTop="16dp"
+        android:text="Status: starting..." android:textSize="13sp"/>
+
+</LinearLayout>
