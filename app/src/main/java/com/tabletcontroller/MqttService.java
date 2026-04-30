@@ -39,6 +39,7 @@ public class MqttService extends Service {
     private ComponentName adminComponent;
     private final Handler handler = new Handler();
     private BroadcastReceiver screenReceiver;
+    private PowerManager.WakeLock wakeLock;
 
     @Override
     public void onCreate() {
@@ -157,12 +158,19 @@ public class MqttService extends Service {
     private void handleCommand(String cmd) {
         switch (cmd) {
             case "wake":
-                PowerManager.WakeLock wl = powerManager.newWakeLock(
-                    PowerManager.SCREEN_BRIGHT_WAKE_LOCK | PowerManager.ACQUIRE_CAUSES_WAKEUP,
-                    "TabletController:wake");
-                wl.acquire(3000);
+                if (wakeLock == null) {
+                    wakeLock = powerManager.newWakeLock(
+                        PowerManager.SCREEN_BRIGHT_WAKE_LOCK | PowerManager.ACQUIRE_CAUSES_WAKEUP,
+                        "TabletController:wake");
+                }
+                if (!wakeLock.isHeld()) {
+                    wakeLock.acquire();
+                }
                 break;
             case "sleep":
+                if (wakeLock != null && wakeLock.isHeld()) {
+                    wakeLock.release();
+                }
                 if (dpm.isAdminActive(adminComponent))
                     dpm.lockNow();
                 else
@@ -234,6 +242,7 @@ public class MqttService extends Service {
     public void onDestroy() {
         super.onDestroy();
         instance = null;
+        if (wakeLock != null && wakeLock.isHeld()) wakeLock.release();
         if (screenReceiver != null) unregisterReceiver(screenReceiver);
         try { if (mqttClient != null) mqttClient.disconnect(); }
         catch (MqttException ignored) {}
