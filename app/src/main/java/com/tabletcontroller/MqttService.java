@@ -14,11 +14,18 @@ public class MqttService extends Service {
     private static final String TAG = "TabletController";
 
     public static final String TOPIC_COMMAND      = "tablet/command";
+    public static final String TOPIC_TEST         = "tablet/test";
     public static final String TOPIC_SCREEN       = "tablet/status/screen";
     public static final String TOPIC_VOLUME       = "tablet/status/volume";
     public static final String TOPIC_MEDIA_STATE  = "tablet/status/media_state";
     public static final String TOPIC_MEDIA_TITLE  = "tablet/status/media_title";
     public static final String TOPIC_MEDIA_ARTIST = "tablet/status/media_artist";
+
+    public static final String ACTION_STATUS   = "com.tabletcontroller.STATUS";
+    public static final String ACTION_MESSAGE  = "com.tabletcontroller.MESSAGE";
+    public static final String EXTRA_CONNECTED = "connected";
+    public static final String EXTRA_TOPIC     = "topic";
+    public static final String EXTRA_PAYLOAD   = "payload";
 
     public static MqttService instance;
     public static String brokerUrl = "tcp://192.168.9.x:1883";
@@ -82,10 +89,22 @@ public class MqttService extends Service {
         startForeground(1, n);
     }
 
+    public void broadcastStatus(boolean connected) {
+        Intent i = new Intent(ACTION_STATUS);
+        i.putExtra(EXTRA_CONNECTED, connected);
+        sendBroadcast(i);
+    }
+
+    public void broadcastMessage(String topic, String payload) {
+        Intent i = new Intent(ACTION_MESSAGE);
+        i.putExtra(EXTRA_TOPIC, topic);
+        i.putExtra(EXTRA_PAYLOAD, payload);
+        sendBroadcast(i);
+    }
+
     private void connectMqtt() {
         try {
             String clientId = "TabletController_" + Build.SERIAL;
-            Log.d(TAG, "Connecting to: " + brokerUrl);
             mqttClient = new MqttClient(brokerUrl, clientId, new MemoryPersistence());
 
             MqttConnectOptions opts = new MqttConnectOptions();
@@ -98,40 +117,42 @@ public class MqttService extends Service {
             }
 
             mqttClient.setCallback(new MqttCallbackExtended() {
-    @Override public void connectComplete(boolean reconnect, String serverURI) {
-        Log.d(TAG, "Connected (reconnect=" + reconnect + ")");
-        broadcastStatus(true);
-        try {
-            mqttClient.subscribe(TOPIC_COMMAND, 1);
-            mqttClient.subscribe(TOPIC_TEST, 1);
-            Log.d(TAG, "Subscribed to topics");
+                @Override public void connectComplete(boolean reconnect, String serverURI) {
+                    Log.d(TAG, "Connected (reconnect=" + reconnect + ")");
+                    broadcastStatus(true);
+                    try {
+                        mqttClient.subscribe(TOPIC_COMMAND, 1);
+                        mqttClient.subscribe(TOPIC_TEST, 1);
+                        Log.d(TAG, "Subscribed to topics");
+                    } catch (MqttException e) {
+                        Log.e(TAG, "Subscribe failed: " + e.getMessage());
+                    }
+                }
+                @Override public void connectionLost(Throwable cause) {
+                    Log.w(TAG, "Connection lost, will auto-reconnect");
+                    broadcastStatus(false);
+                }
+                @Override public void messageArrived(String topic, MqttMessage msg) {
+                    String payload = new String(msg.getPayload()).trim();
+                    Log.d(TAG, "Message on " + topic + ": " + payload);
+                    broadcastMessage(topic, payload);
+                    if (topic.equals(TOPIC_COMMAND))
+                        handleCommand(payload.toLowerCase());
+                }
+                @Override public void deliveryComplete(IMqttDeliveryToken t) {}
+            });
+
+            Log.d(TAG, "Connecting to: " + brokerUrl);
+            mqttClient.connect(opts);
+
         } catch (MqttException e) {
-            Log.e(TAG, "Subscribe failed: " + e.getMessage());
+            Log.e(TAG, "MQTT connect failed: " + e.getMessage() + " reason: " + e.getReasonCode() + " cause: " + e.getCause());
+            broadcastStatus(false);
+            handler.postDelayed(new Runnable() {
+                @Override public void run() { connectMqtt(); }
+            }, 15000);
         }
     }
-    @Override public void connectionLost(Throwable cause) {
-        Log.w(TAG, "Connection lost, will auto-reconnect");
-        broadcastStatus(false);
-    }
-    @Override public void messageArrived(String topic, MqttMessage msg) {
-        String payload = new String(msg.getPayload()).trim();
-        Log.d(TAG, "Message on " + topic + ": " + payload);
-        broadcastMessage(topic, payload);
-        if (topic.equals(TOPIC_COMMAND))
-            handleCommand(payload.toLowerCase());
-    }
-    @Override public void deliveryComplete(IMqttDeliveryToken t) {}
-});
-mqttClient.connect(opts);
-Log.d(TAG, "MQTT connecting to " + brokerUrl);
-} catch (MqttException e) {
-    Log.e(TAG, "MQTT connect failed: " + e.getMessage() + " reason: " + e.getReasonCode() + " cause: " + e.getCause());
-    broadcastStatus(false);
-    handler.postDelayed(new Runnable() {
-        @Override public void run() { connectMqtt(); }
-    }, 15000);
-}
-}
 
     private void handleCommand(String cmd) {
         switch (cmd) {
@@ -199,9 +220,14 @@ Log.d(TAG, "MQTT connecting to " + brokerUrl);
         }
     }
 
+    public boolean isConnected() {
+        return mqttClient != null && mqttClient.isConnected();
+    }
+
     @Override public int onStartCommand(Intent intent, int flags, int startId) {
         return START_STICKY;
     }
+
     @Override public IBinder onBind(Intent intent) { return null; }
 
     @Override
