@@ -85,6 +85,7 @@ public class MqttService extends Service {
     private void connectMqtt() {
         try {
             String clientId = "TabletController_" + Build.SERIAL;
+            Log.d(TAG, "Connecting to: " + brokerUrl);
             mqttClient = new MqttClient(brokerUrl, clientId, new MemoryPersistence());
 
             MqttConnectOptions opts = new MqttConnectOptions();
