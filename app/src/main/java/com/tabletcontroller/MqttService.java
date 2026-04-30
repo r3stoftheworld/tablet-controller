@@ -28,7 +28,7 @@ public class MqttService extends Service {
     public static final String EXTRA_PAYLOAD   = "payload";
 
     public static MqttService instance;
-    public static String brokerUrl = "tcp://192.168.9.x:1883";
+    public static String brokerUrl = "tcp://192.168.9.45:1883";
     public static String username  = "";
     public static String password  = "";
 
@@ -53,9 +53,9 @@ public class MqttService extends Service {
         password  = prefs.getString("password", "");
         screenShouldBeOn = prefs.getBoolean("screen_on", false);
 
-        powerManager  = (PowerManager) getSystemService(POWER_SERVICE);
-        audioManager  = (AudioManager) getSystemService(AUDIO_SERVICE);
-        dpm           = (DevicePolicyManager) getSystemService(DEVICE_POLICY_SERVICE);
+        powerManager   = (PowerManager) getSystemService(POWER_SERVICE);
+        audioManager   = (AudioManager) getSystemService(AUDIO_SERVICE);
+        dpm            = (DevicePolicyManager) getSystemService(DEVICE_POLICY_SERVICE);
         adminComponent = new ComponentName(this, AdminReceiver.class);
 
         registerScreenReceiver();
@@ -130,7 +130,8 @@ public class MqttService extends Service {
             MqttConnectOptions opts = new MqttConnectOptions();
             opts.setCleanSession(true);
             opts.setAutomaticReconnect(true);
-            opts.setKeepAliveInterval(60);
+            opts.setKeepAliveInterval(120);
+            opts.setConnectionTimeout(30);
             if (!username.isEmpty()) {
                 opts.setUserName(username);
                 opts.setPassword(password.toCharArray());
@@ -173,9 +174,6 @@ public class MqttService extends Service {
         } catch (MqttException e) {
             Log.e(TAG, "MQTT connect failed: " + e.getMessage() + " reason: " + e.getReasonCode() + " cause: " + e.getCause());
             broadcastStatus(false);
-            handler.postDelayed(new Runnable() {
-                @Override public void run() { connectMqtt(); }
-            }, 15000);
         }
     }
 
