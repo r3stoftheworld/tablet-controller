@@ -40,6 +40,7 @@ public class MqttService extends Service {
     private final Handler handler = new Handler();
     private BroadcastReceiver screenReceiver;
     private PowerManager.WakeLock wakeLock;
+    private boolean screenShouldBeOn = false;
 
     @Override
     public void onCreate() {
@@ -103,9 +104,26 @@ public class MqttService extends Service {
         sendBroadcast(i);
     }
 
+    private void applyWakeLock() {
+        if (wakeLock == null) {
+            wakeLock = powerManager.newWakeLock(
+                PowerManager.SCREEN_BRIGHT_WAKE_LOCK | PowerManager.ACQUIRE_CAUSES_WAKEUP,
+                "TabletController:wake");
+        }
+        if (!wakeLock.isHeld()) {
+            wakeLock.acquire();
+        }
+    }
+
     private void connectMqtt() {
         try {
-            String clientId = "TabletController_" + Build.SERIAL;
+            SharedPreferences prefs = getSharedPreferences("mqtt_prefs", MODE_PRIVATE);
+            String clientId = prefs.getString("client_id", null);
+            if (clientId == null) {
+                clientId = "TabletController_" + java.util.UUID.randomUUID().toString();
+                prefs.edit().putString("client_id", clientId).apply();
+            }
+
             mqttClient = new MqttClient(brokerUrl, clientId, new MemoryPersistence());
 
             MqttConnectOptions opts = new MqttConnectOptions();
@@ -122,11 +140,14 @@ public class MqttService extends Service {
                     Log.d(TAG, "Connected (reconnect=" + reconnect + ")");
                     broadcastStatus(true);
                     try {
-                        mqttClient.subscribe(TOPIC_COMMAND, 1);
-                        mqttClient.subscribe(TOPIC_TEST, 1);
+                        mqttClient.subscribe(TOPIC_COMMAND, 0);
+                        mqttClient.subscribe(TOPIC_TEST, 0);
                         Log.d(TAG, "Subscribed to topics");
                     } catch (MqttException e) {
                         Log.e(TAG, "Subscribe failed: " + e.getMessage());
+                    }
+                    if (screenShouldBeOn) {
+                        applyWakeLock();
                     }
                 }
                 @Override public void connectionLost(Throwable cause) {
@@ -158,16 +179,11 @@ public class MqttService extends Service {
     private void handleCommand(String cmd) {
         switch (cmd) {
             case "wake":
-                if (wakeLock == null) {
-                    wakeLock = powerManager.newWakeLock(
-                        PowerManager.SCREEN_BRIGHT_WAKE_LOCK | PowerManager.ACQUIRE_CAUSES_WAKEUP,
-                        "TabletController:wake");
-                }
-                if (!wakeLock.isHeld()) {
-                    wakeLock.acquire();
-                }
+                screenShouldBeOn = true;
+                applyWakeLock();
                 break;
             case "sleep":
+                screenShouldBeOn = false;
                 if (wakeLock != null && wakeLock.isHeld()) {
                     wakeLock.release();
                 }
