@@ -37,7 +37,7 @@ public class MqttService extends Service {
     private AudioManager audioManager;
     private DevicePolicyManager dpm;
     private ComponentName adminComponent;
-    private final Handler handler = new Handler();
+    private final Handler handler = new Handler(Looper.getMainLooper());
     private BroadcastReceiver screenReceiver;
     private PowerManager.WakeLock wakeLock;
     private boolean screenShouldBeOn = false;
@@ -51,6 +51,7 @@ public class MqttService extends Service {
         brokerUrl = prefs.getString("broker", brokerUrl);
         username  = prefs.getString("username", "");
         password  = prefs.getString("password", "");
+        screenShouldBeOn = prefs.getBoolean("screen_on", false);
 
         powerManager  = (PowerManager) getSystemService(POWER_SERVICE);
         audioManager  = (AudioManager) getSystemService(AUDIO_SERVICE);
@@ -147,7 +148,9 @@ public class MqttService extends Service {
                         Log.e(TAG, "Subscribe failed: " + e.getMessage());
                     }
                     if (screenShouldBeOn) {
-                        applyWakeLock();
+                        handler.post(new Runnable() {
+                            @Override public void run() { applyWakeLock(); }
+                        });
                     }
                 }
                 @Override public void connectionLost(Throwable cause) {
@@ -180,17 +183,27 @@ public class MqttService extends Service {
         switch (cmd) {
             case "wake":
                 screenShouldBeOn = true;
-                applyWakeLock();
+                getSharedPreferences("mqtt_prefs", MODE_PRIVATE)
+                    .edit().putBoolean("screen_on", true).apply();
+                handler.post(new Runnable() {
+                    @Override public void run() { applyWakeLock(); }
+                });
                 break;
             case "sleep":
                 screenShouldBeOn = false;
-                if (wakeLock != null && wakeLock.isHeld()) {
-                    wakeLock.release();
-                }
-                if (dpm.isAdminActive(adminComponent))
-                    dpm.lockNow();
-                else
-                    Log.e(TAG, "Device admin not granted");
+                getSharedPreferences("mqtt_prefs", MODE_PRIVATE)
+                    .edit().putBoolean("screen_on", false).apply();
+                handler.post(new Runnable() {
+                    @Override public void run() {
+                        if (wakeLock != null && wakeLock.isHeld()) {
+                            wakeLock.release();
+                        }
+                        if (dpm.isAdminActive(adminComponent))
+                            dpm.lockNow();
+                        else
+                            Log.e(TAG, "Device admin not granted");
+                    }
+                });
                 break;
             case "play_pause":
                 dispatchMedia(KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE);
