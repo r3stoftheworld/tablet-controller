@@ -97,27 +97,41 @@ public class MqttService extends Service {
                 opts.setPassword(password.toCharArray());
             }
 
-            mqttClient.setCallback(new MqttCallback() {
-                @Override public void connectionLost(Throwable cause) {
-                    Log.w(TAG, "Connection lost, will auto-reconnect");
-                }
-                @Override public void messageArrived(String topic, MqttMessage msg) {
-                    handleCommand(new String(msg.getPayload()).trim().toLowerCase());
-                }
-                @Override public void deliveryComplete(IMqttDeliveryToken t) {}
-            });
-
-            mqttClient.connect(opts);
+            mqttClient.setCallback(new MqttCallbackExtended() {
+    @Override public void connectComplete(boolean reconnect, String serverURI) {
+        Log.d(TAG, "Connected (reconnect=" + reconnect + ")");
+        broadcastStatus(true);
+        try {
             mqttClient.subscribe(TOPIC_COMMAND, 1);
-            Log.d(TAG, "MQTT connected to " + brokerUrl);
-
+            mqttClient.subscribe(TOPIC_TEST, 1);
+            Log.d(TAG, "Subscribed to topics");
         } catch (MqttException e) {
-            Log.e(TAG, "MQTT connect failed: " + e.getMessage());
-            handler.postDelayed(new Runnable() {
-                @Override public void run() { connectMqtt(); }
-            }, 15000);
+            Log.e(TAG, "Subscribe failed: " + e.getMessage());
         }
     }
+    @Override public void connectionLost(Throwable cause) {
+        Log.w(TAG, "Connection lost, will auto-reconnect");
+        broadcastStatus(false);
+    }
+    @Override public void messageArrived(String topic, MqttMessage msg) {
+        String payload = new String(msg.getPayload()).trim();
+        Log.d(TAG, "Message on " + topic + ": " + payload);
+        broadcastMessage(topic, payload);
+        if (topic.equals(TOPIC_COMMAND))
+            handleCommand(payload.toLowerCase());
+    }
+    @Override public void deliveryComplete(IMqttDeliveryToken t) {}
+});
+mqttClient.connect(opts);
+Log.d(TAG, "MQTT connecting to " + brokerUrl);
+} catch (MqttException e) {
+    Log.e(TAG, "MQTT connect failed: " + e.getMessage() + " reason: " + e.getReasonCode() + " cause: " + e.getCause());
+    broadcastStatus(false);
+    handler.postDelayed(new Runnable() {
+        @Override public void run() { connectMqtt(); }
+    }, 15000);
+}
+}
 
     private void handleCommand(String cmd) {
         switch (cmd) {
