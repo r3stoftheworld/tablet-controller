@@ -28,7 +28,7 @@ public class MqttService extends Service {
     public static final String EXTRA_PAYLOAD   = "payload";
 
     public static MqttService instance;
-    public static String brokerUrl = "tcp://192.168.9.45:1883";
+    public static String brokerUrl = "tcp://192.168.9.x:1883";
     public static String username  = "";
     public static String password  = "";
 
@@ -68,15 +68,24 @@ public class MqttService extends Service {
         screenReceiver = new BroadcastReceiver() {
             @Override
             public void onReceive(Context context, Intent intent) {
-                if (Intent.ACTION_SCREEN_ON.equals(intent.getAction()))
+                if (Intent.ACTION_SCREEN_ON.equals(intent.getAction())) {
                     publish(TOPIC_SCREEN, "ON");
-                else if (Intent.ACTION_SCREEN_OFF.equals(intent.getAction()))
+                } else if (Intent.ACTION_SCREEN_OFF.equals(intent.getAction())) {
                     publish(TOPIC_SCREEN, "OFF");
+                } else if ("android.net.conn.CONNECTIVITY_CHANGE".equals(intent.getAction())) {
+                    if (mqttClient != null && !mqttClient.isConnected()) {
+                        Log.d(TAG, "Network changed, forcing reconnect");
+                        handler.postDelayed(new Runnable() {
+                            @Override public void run() { connectMqtt(); }
+                        }, 3000);
+                    }
+                }
             }
         };
         IntentFilter f = new IntentFilter();
         f.addAction(Intent.ACTION_SCREEN_ON);
         f.addAction(Intent.ACTION_SCREEN_OFF);
+        f.addAction("android.net.conn.CONNECTIVITY_CHANGE");
         registerReceiver(screenReceiver, f);
     }
 
